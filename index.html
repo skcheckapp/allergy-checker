@@ -78,10 +78,16 @@
     const normalized = text.replace(/\s/g, "");
 
     const terms = [
-      "小麦", "こむぎ", "コムギ",
-      "小麦粉", "強力粉", "薄力粉",
-      "中力粉", "パン粉", "麩"
-    ];
+  "小麦粉",
+  "強力粉",
+  "薄力粉",
+  "中力粉",
+  "パン粉",
+  "小麦",
+  "こむぎ",
+  "コムギ",
+  "麩"
+];
 
     const found = terms.filter(term =>
       normalized.includes(term)
@@ -131,7 +137,32 @@
     // まずHTML用に変換してから、対象語句を色付けする
     let highlightedText = escapeHTML(text);
 
-    for (const term of uniqueFound) {
+    // 実際に読み取った文字に含まれる対象語句を調べる
+    const highlightTerms = terms
+      .filter(term => normalized.includes(term))
+      .sort((a, b) => b.length - a.length);
+
+    // 小麦粉は「小麦」だけでなく「粉」まで色付けする
+    highlightedText = highlightedText.replace(
+      /小麦\s*粉/g,
+      match =>
+        `<mark style="background-color: #ffeb3b; color: #222; padding: 2px 3px; border-radius: 3px; font-weight: bold;">${match}</mark>`
+    );
+
+    // 小麦粉以外の対象語句も色付けする
+    for (const term of highlightTerms) {
+      if (term === "小麦粉") continue;
+
+      // 小麦粉の中の「小麦」を二重に色付けしない
+      if (term === "小麦") {
+        highlightedText = highlightedText.replace(
+          /小麦(?!\s*粉)/g,
+          match =>
+            `<mark style="background-color: #ffeb3b; color: #222; padding: 2px 3px; border-radius: 3px; font-weight: bold;">${match}</mark>`
+        );
+        continue;
+      }
+
       const safeTerm = escapeHTML(term);
       highlightedText = highlightedText.split(safeTerm).join(
         `<mark style="background-color: #ffeb3b; color: #222; padding: 2px 3px; border-radius: 3px; font-weight: bold;">${safeTerm}</mark>`
