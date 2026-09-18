@@ -1,4 +1,83 @@
- const found = terms.filter(term => text.includes(term));
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>アレルギーチェッカー</title>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 24px;
+      background: #fffaf4;
+      color: #333;
+    }
+    h1 { color: #39765b; }
+    button, input {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      margin: 16px 0;
+      padding: 14px;
+      font-size: 16px;
+    }
+    button {
+      background: #39765b;
+      color: white;
+      border: 0;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    #result {
+      margin-top: 20px;
+      padding: 16px;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      white-space: pre-wrap;
+    }
+    img { max-width: 100%; }
+  </style>
+</head>
+<body>
+  <h1>🌿 アレルギーチェッカー</h1>
+  <p>食品の原材料表示を撮影して、小麦に関係する言葉を確認します。</p>
+
+  <label for="photo">食品表示の写真を選んでね</label>
+  <input id="photo" type="file" accept="image/*" capture="environment">
+
+  <button id="check">写真を読み取る</button>
+  <div id="result" role="status">ここに結果が表示されます。</div>
+
+  <script>
+    const photo = document.getElementById("photo");
+    const button = document.getElementById("check");
+    const result = document.getElementById("result");
+
+    button.addEventListener("click", async () => {
+      if (!photo.files || !photo.files[0]) {
+        result.textContent = "先に写真を選んでね。";
+        return;
+      }
+
+      button.disabled = true;
+      result.textContent = "文字を読み取っています。少し待ってね…";
+
+      try {
+        const worker = await Tesseract.createWorker("jpn");
+        const { data: { text } } =
+          await worker.recognize(photo.files[0]);
+        await worker.terminate();
+
+        const terms = [
+          "小麦", "こむぎ", "コムギ",
+          "小麦粉", "強力粉", "薄力粉",
+          "中力粉", "パン粉", "麩"
+        ];
+
+        const found = terms.filter(term => text.includes(term));
 
         if (text.trim().length === 0) {
           result.textContent =
