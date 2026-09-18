@@ -42,7 +42,7 @@
   </style>
 </head>
 <body>
-  <h1>🌿 アレルギーチェッカー</h1>
+  <h1>🌿アレルギーチェッカー🌿</h1>
   <p>食品の原材料表示を撮影して、小麦に関係する言葉を確認します。</p>
 
   <label for="photo">食品表示の写真を選んでね</label>
@@ -57,49 +57,77 @@
     const result = document.getElementById("result");
 
     button.addEventListener("click", async () => {
-      if (!photo.files || !photo.files[0]) {
-        result.textContent = "先に写真を選んでね。";
-        return;
-      }
+  if (!photo.files || !photo.files[0]) {
+    result.textContent = "先に食品表示の写真を選んでね。";
+    return;
+  }
 
-      button.disabled = true;
-      result.textContent = "文字を読み取っています。少し待ってね…";
+  button.disabled = true;
+  result.textContent = "文字を読み取っています。少し待ってね…";
 
-      try {
-        const worker = await Tesseract.createWorker("jpn");
-        const { data: { text } } =
-          await worker.recognize(photo.files[0]);
-        await worker.terminate();
+  let worker;
 
-        const terms = [
-          "小麦", "こむぎ", "コムギ",
-          "小麦粉", "強力粉", "薄力粉",
-          "中力粉", "パン粉", "麩"
-        ];
+  try {
+    worker = await Tesseract.createWorker("jpn");
 
-        const found = terms.filter(term => text.includes(term));
+    const { data } = await worker.recognize(photo.files[0]);
+    const text = data.text || "";
+    const confidence = data.confidence ?? 0;
 
-        if (text.trim().length === 0) {
-          result.textContent =
-            "文字を読み取れませんでした。写真を撮り直してね。";
-        } else if (found.length > 0) {
-          result.textContent =
-            "🔴 小麦に関係する表示が見つかりました。\n\n" +
-            "該当語句：" + [...new Set(found)].join("、") +
-            "\n\n読み取った文字：\n" + text;
-        } else {
-          result.textContent =
-            "🟡 登録した語句は見つかりませんでした。\n" +
-            "小麦が含まれないことを意味しません。\n\n" +
-            "読み取った文字：\n" + text;
-        }
-      } catch (error) {
-        result.textContent =
-          "読み取りに失敗しました。通信環境や写真を確認してね。";
-      } finally {
-        button.disabled = false;
-      }
-    });
+    // 空白や改行を除いて検索しやすくする
+    const normalized = text.replace(/\s/g, "");
+
+    const terms = [
+      "小麦", "こむぎ", "コムギ",
+      "小麦粉", "強力粉", "薄力粉",
+      "中力粉", "パン粉", "麩"
+    ];
+
+    const found = terms.filter(term =>
+      normalized.includes(term)
+    );
+
+    let message = "";
+
+    if (text.trim().length === 0) {
+      message =
+        "⚠️ 文字を読み取れませんでした。\n" +
+        "明るい場所で、表示を大きく・正面から撮り直してください。";
+    } else if (confidence < 65) {
+      message =
+        "⚠️ 読み取りの信頼度が低いため、判定できません。\n" +
+        "写真を撮り直すか、原材料表示を目で確認してください。\n\n" +
+        "小麦の検出語句：" +
+        (found.length ? [...new Set(found)].join("、") : "見つかりません") +
+        "\n\n読み取り信頼度：" + Math.round(confidence) + "%";
+    } else if (found.length > 0) {
+      message =
+        "🔴 小麦に関係する表示が見つかりました。\n" +
+        "原材料表示を確認してください。\n\n" +
+        "該当語句：" + [...new Set(found)].join("、") +
+        "\n\n読み取り信頼度：" + Math.round(confidence) + "%";
+    } else {
+      message =
+        "🟡 登録した小麦関連語句は見つかりませんでした。\n" +
+        "小麦が含まれないことを意味しません。\n" +
+        "必ずパッケージの表示を目で確認してください。\n\n" +
+        "読み取り信頼度：" + Math.round(confidence) + "%";
+    }
+
+    message += "\n\n--- 読み取った文字 ---\n" + text;
+    result.textContent = message;
+
+  } catch (error) {
+    result.textContent =
+      "⚠️ 読み取りに失敗しました。\n" +
+      "通信環境や写真を確認して、もう一度試してください。";
+  } finally {
+    if (worker) {
+      await worker.terminate();
+    }
+    button.disabled = false;
+  }
+});
   </script>
 </body>
 </html>
