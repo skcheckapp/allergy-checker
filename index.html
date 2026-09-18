@@ -72,11 +72,15 @@
 
     const { data } = await worker.recognize(photo.files[0]);
     const text = data.text || "";
-    const confidence = data.confidence ?? 0;
+const confidence = data.confidence ?? 0;
 
-    // 空白や改行を除いて検索しやすくする
-    const normalized = text.replace(/\s/g, "");
+// 全角・半角の違いを整え、空白や改行を除去
+const normalized = text
+  .normalize("NFKC")
+  .replace(/[\s\u3000]+/g, "");
 
+// 画面表示にも、空白を除去した文章を使う
+const displayText = normalized;
     const terms = [
   "小麦粉",
   "強力粉",
@@ -135,7 +139,7 @@
       .sort((a, b) => b.length - a.length);
 
     // まずHTML用に変換してから、対象語句を色付けする
-    let highlightedText = escapeHTML(text);
+    let highlightedText = escapeHTML(displayText);
 
     // 実際に読み取った文字に含まれる対象語句を調べる
     const highlightTerms = terms
