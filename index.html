@@ -114,8 +114,35 @@
         "読み取り信頼度：" + Math.round(confidence) + "%";
     }
 
-    message += "\n\n--- 読み取った文字 ---\n" + text;
-    result.textContent = message;
+    // 読み取った文字を安全にHTML表示できるようにする
+    const escapeHTML = (str) =>
+      str.replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      })[char]);
+
+    // 検出した語句を長い順に並べる
+    const uniqueFound = [...new Set(found)]
+      .sort((a, b) => b.length - a.length);
+
+    // まずHTML用に変換してから、対象語句を色付けする
+    let highlightedText = escapeHTML(text);
+
+    for (const term of uniqueFound) {
+      const safeTerm = escapeHTML(term);
+      highlightedText = highlightedText.split(safeTerm).join(
+        `<mark style="background-color: #ffeb3b; color: #222; padding: 2px 3px; border-radius: 3px; font-weight: bold;">${safeTerm}</mark>`
+      );
+    }
+
+    // 結果メッセージと読み取った文字を表示
+    result.innerHTML =
+      `<div style="white-space: pre-wrap;">${escapeHTML(message)}</div>` +
+      `<h3>読み取った文字（対象語句を黄色で表示）</h3>` +
+      `<div style="white-space: pre-wrap; overflow-wrap: anywhere;">${highlightedText}</div>`;
 
   } catch (error) {
     result.textContent =
